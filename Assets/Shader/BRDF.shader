@@ -11,7 +11,7 @@ Shader "Lit/MyBRDF"
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalRenderPipeline"}
         LOD 100
 
         Pass
@@ -81,8 +81,8 @@ Shader "Lit/MyBRDF"
             float3 F_Function(float HdotL, float3 F0)
             {
                 float fre = exp2((-5.55473 * HdotL - 6.98316) * HdotL);
-                // return lerp(fre, 1, F0);
-                return F0 + (1 - F0) * fre;
+                return lerp(fre, 1, F0);
+                // return F0 + (1 - F0) * fre;
             }
 
             real3 SH_IndirectDiffuse(float3 normalWS)
@@ -110,10 +110,10 @@ Shader "Lit/MyBRDF"
                 float3 reflectDirectionWS = reflect(-viewWS, normalWS);
                 roughness = roughness * (1.7 - 0.7 * roughness);
                 float midLevel = roughness * 6;
-                float specColor = SAMPLE_TEXTURECUBE_LOD(unity_SpecCube0, samplerunity_SpecCube0,
+                half4 specColor = SAMPLE_TEXTURECUBE_LOD(unity_SpecCube0, samplerunity_SpecCube0,
                     reflectDirectionWS, midLevel);
                 #if !defined(UNITY_USE_NATIVE_HDR)
-                return specColor * AO;
+                return specColor.xyz * AO;
                 #else
                 return DecodeHDREnvironment(specColor, unity_SpecCube0_HDR);
                 #endif
@@ -154,6 +154,8 @@ Shader "Lit/MyBRDF"
 
                 // 采样法线贴图
                 float sgn = i.tangentWS.w;
+                i.tangentWS.xyz = normalize(i.tangentWS.xyz);
+                i.normalWS.xyz = normalize(i.normalWS.xyz);
                 float3 bitangent = sgn * cross(i.normalWS.xyz, i.tangentWS.xyz);
                 half3 normalTS = UnpackNormal(SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, i.uv));
                 half3 normalWS = mul(normalTS, half3x3(i.tangentWS.xyz, bitangent.xyz, i.normalWS.xyz));
