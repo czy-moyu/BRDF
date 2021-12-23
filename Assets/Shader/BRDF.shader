@@ -81,8 +81,8 @@ Shader "Lit/MyBRDF"
             float3 F_Function(float HdotL, float3 F0)
             {
                 float fre = exp2((-5.55473 * HdotL - 6.98316) * HdotL);
-                return lerp(fre, 1, F0);
-                // return F0 + (1 - F0) * fre;
+                // return lerp(fre, 1, F0);
+                return F0 + (1 - F0) * fre;
             }
 
             real3 SH_IndirectDiffuse(float3 normalWS)
@@ -102,7 +102,7 @@ Shader "Lit/MyBRDF"
             real3 GetIndirectKs(float NdotV, float3 F0, float roughness)
             {
                 float fre = exp2((-5.55473 * NdotV - 6.98316) * NdotV);
-                return lerp(fre, 1, max(1.0 - roughness, F0));
+                return F0 + fre * saturate(1-roughness-F0);
             }
 
             real3 SampleIndirectCube(float3 normalWS, float3 viewWS, float roughness, float AO)
@@ -158,6 +158,7 @@ Shader "Lit/MyBRDF"
                 i.normalWS.xyz = normalize(i.normalWS.xyz);
                 float3 bitangent = sgn * cross(i.normalWS.xyz, i.tangentWS.xyz);
                 half3 normalTS = UnpackNormal(SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, i.uv));
+                // 不转置左乘是从世界空间转到切线空间
                 half3 normalWS = mul(normalTS, half3x3(i.tangentWS.xyz, bitangent.xyz, i.normalWS.xyz));
                 normalWS = normalize(normalWS);
                 
@@ -205,7 +206,6 @@ Shader "Lit/MyBRDF"
                 float3 Lo = (diffuceBrdf + specularBrdf * PI) * radiance * NdotL;
                 Lo += indirectDiffuse + indirectSpecular;
                 
-                // return half4(Lo,1);
                 return half4(Lo,1);
             }
             ENDHLSL
